@@ -1,0 +1,5 @@
+{
+  "functions": {
+    "api/scrape.js": { "maxDuration": 60 }
+  }
+}

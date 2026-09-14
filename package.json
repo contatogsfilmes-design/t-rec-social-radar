@@ -1,0 +1,14 @@
+{
+  "name": "t-rec-social-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Painel T-Rec Studio: acompanhamento de seguidores e views medias dos clientes em Instagram, TikTok, YouTube e Facebook via Apify.",
+  "type": "module",
+  "scripts": {
+    "test:apify": "node scripts/test-apify.js"
+  },
+  "dependencies": {
+    "apify-client": "^2.11.0",
+    "dotenv": "^16.4.5"
+  }
+}

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>T-Rec Social Radar</title>
+<link rel="icon" href="assets/favicon-src.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Archivo+Narrow:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Bungee&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --creme: #F2E6C9;
+    --tinta: #141110;
+    --laranja: #ED703A;
+    --petroleo: #2B6F6A;
+    --mostarda: #C99A3C;
+    --vermelho: #E5231B;
+
+    --bg: var(--creme);
+    --fg: var(--tinta);
+    --card-bg: #ffffff;
+    --border: rgba(20,17,16,0.15);
+    --muted: rgba(20,17,16,0.55);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: var(--tinta);
+      --fg: var(--creme);
+      --card-bg: #201c1a;
+      --border: rgba(242,230,201,0.15);
+      --muted: rgba(242,230,201,0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: var(--tinta);
+    --fg: var(--creme);
+    --card-bg: #201c1a;
+    --border: rgba(242,230,201,0.15);
+    --muted: rgba(242,230,201,0.55);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Archivo Narrow', sans-serif;
+    padding: 24px 16px 60px;
+  }
+  h1, h2, h3 { font-family: 'Anton', sans-serif; font-weight: 400; letter-spacing: 0.5px; margin: 0; }
+  .mono { font-family: 'Space Mono', monospace; }
+
+  header.topo {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1000px; margin: 0 auto 24px; flex-wrap: wrap; gap: 12px;
+  }
+  header.topo img { height: 44px; }
+  .tag-studio { font-family: 'Permanent Marker', cursive; color: var(--laranja); font-size: 14px; }
+
+  #tela-login {
+    max-width: 400px; margin: 15vh auto; text-align: center;
+  }
+  #tela-login button, .btn {
+    background: var(--laranja); color: #fff; border: none; border-radius: 8px;
+    padding: 12px 20px; font-family: 'Archivo Narrow', sans-serif; font-weight: 700;
+    font-size: 15px; cursor: pointer;
+  }
+  .btn--secundario { background: transparent; border: 2px solid var(--fg); color: var(--fg); }
+  .btn--perigo { background: var(--vermelho); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  main#app { max-width: 1000px; margin: 0 auto; }
+
+  .barra-controles {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 20px;
+  }
+  .chip {
+    border: 2px solid var(--border); background: transparent; color: var(--fg);
+    padding: 6px 14px; border-radius: 999px; font-family: 'Space Mono', monospace;
+    font-size: 13px; cursor: pointer;
+  }
+  .chip--ativo { background: var(--laranja); border-color: var(--laranja); color: #fff; }
+  #periodos { display: flex; gap: 6px; flex-wrap: wrap; }
+  .espacador { flex: 1; }
+  .link-sutil { background: none; border: none; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 13px; font-family: 'Archivo Narrow'; }
+
+  #custo-rodada { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); text-align: right; margin-bottom: 12px; }
+
+  #clientes { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .icon-btn { background: none; border: none; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 12px; font-family: 'Archivo Narrow'; }
+
+  .rede-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--border); cursor: pointer; }
+  .rede-item:first-child { border-top: none; }
+  .rede-item--inativa { opacity: 0.35; cursor: default; }
+  .rede-item input[type="checkbox"] { margin-top: 4px; }
+  .rede-info { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+  .rede-nome { font-weight: 700; font-size: 13px; text-transform: uppercase; }
+  .rede-handle { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+  .rede-metricas { font-size: 13px; }
+  .rede-data { display: block; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .rede-status { font-size: 12px; color: var(--muted); font-style: italic; }
+
+  .vazio { text-align: center; color: var(--muted); padding: 40px 0; }
+
+  #modal-cliente {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10;
+  }
+  #modal-cliente .painel {
+    background: var(--card-bg); border-radius: 12px; padding: 24px; max-width: 420px; width: 100%;
+    max-height: 90vh; overflow-y: auto;
+  }
+  #modal-cliente label { display: block; font-size: 13px; margin: 12px 0 4px; color: var(--muted); }
+  #modal-cliente input {
+    width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--fg); font-family: 'Archivo Narrow'; font-size: 15px;
+  }
+  .modal-acoes { display: flex; gap: 10px; margin-top: 20px; justify-content: space-between; }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div style="display:flex; align-items:center; gap:10px;">
+    <img id="logo" src="assets/trec-horizontal-ink.png" alt="T-Rec Studio" />
+  </div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <span id="usuario-email" class="mono" style="font-size:12px; color:var(--muted);"></span>
+    <button id="btn-logout" class="btn btn--secundario">Sair</button>
+  </div>
+</header>
+
+<section id="tela-login">
+  <h1>T-REC SOCIAL RADAR</h1>
+  <p class="tag-studio">acompanhamento de clientes</p>
+  <p style="margin: 20px 0; color: var(--muted);">Painel interno pra acompanhar seguidores e views médias dos clientes em Instagram, TikTok, YouTube e Facebook.</p>
+  <button id="btn-login">Entrar com Google</button>
+</section>
+
+<main id="app" hidden>
+  <div class="barra-controles">
+    <strong style="font-family:'Space Mono'; font-size:13px;">PERÍODO:</strong>
+    <div id="periodos"></div>
+    <div class="espacador"></div>
+    <button id="btn-marcar-todos" class="link-sutil">selecionar todos</button>
+    <button id="btn-desmarcar-todos" class="link-sutil">limpar seleção</button>
+    <button id="btn-novo-cliente" class="btn btn--secundario">+ Cliente</button>
+    <button id="btn-atualizar" class="btn">Atualizar selecionados</button>
+  </div>
+  <div id="custo-rodada"></div>
+  <div id="clientes"></div>
+</main>
+
+<div id="modal-cliente" hidden>
+  <div class="painel">
+    <h2 id="modal-titulo">Novo cliente</h2>
+    <form id="form-cliente">
+      <label>Nome do cliente</label>
+      <input id="input-nome" required />
+      <label>Instagram (usuário, sem @)</label>
+      <input id="input-instagram" placeholder="ex: betocarvalhoo" />
+      <label>TikTok (usuário, sem @)</label>
+      <input id="input-tiktok" placeholder="ex: betocarvalhoagro" />
+      <label>YouTube (handle do canal, sem @)</label>
+      <input id="input-youtube" placeholder="ex: BETOCARVALHOo" />
+      <label>Facebook (nome da página ou profile.php?id=...)</label>
+      <input id="input-facebook" placeholder="ex: profile.php?id=100068293766977" />
+      <div class="modal-acoes">
+        <button type="button" id="btn-excluir-cliente" class="btn btn--perigo" hidden>Excluir cliente</button>
+        <span class="espacador"></span>
+        <button type="button" id="btn-fechar-modal" class="btn btn--secundario">Cancelar</button>
+        <button type="submit" class="btn">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  document.getElementById('logo').src =
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'assets/trec-horizontal-paper.png'
+      : 'assets/trec-horizontal-ink.png';
+</script>
+<script src="app.js"></script>
+</body>
+</html>
