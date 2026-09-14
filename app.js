@@ -156,7 +156,16 @@ async function carregarEstado() {
 }
 
 async function salvarEstado() {
-  await docRef.set(estado);
+  if (!docRef) {
+    alert("Não deu pra salvar: o Firebase ainda não foi configurado nesse painel (veja o README.md do projeto — falta preencher firebase-config.js).");
+    throw new Error("Firebase não configurado");
+  }
+  try {
+    await docRef.set(estado);
+  } catch (e) {
+    alert("Não deu pra salvar: " + e.message);
+    throw e;
+  }
 }
 
 function render() {
