@@ -6,7 +6,7 @@
 // Senha simples compartilhada (Biel + Duda) — não é criptografia de verdade,
 // é só um filtro contra quem achar a URL por acaso. Troque antes de mandar o
 // link pra Duda. Fica salva no localStorage do navegador depois da 1a vez.
-const SENHA_ACESSO = "trec-radar-2026";
+const SENHA_ACESSO = "Tatiane42@";
 const CHAVE_LOCALSTORAGE = "trec-social-radar-acesso";
 
 const REDES = [
