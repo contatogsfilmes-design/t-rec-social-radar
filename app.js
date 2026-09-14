@@ -66,11 +66,6 @@ const CLIENTES_PADRAO = {
   },
 };
 
-firebase.initializeApp(window.FIREBASE_CONFIG);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const docRef = db.collection("trec-social-radar").doc("dados");
-
 let estado = { clientes: {}, ultimos: {}, historico: [] };
 let periodoSelecionado = 30;
 let selecionados = new Set(); // chaves "clienteId::network"
@@ -83,10 +78,6 @@ const fmtUsd = (n) => `$${n.toFixed(3)}`;
 const chave = (c, r) => `${c}::${r}`;
 const hoje = () => new Date().toISOString().slice(0, 10);
 const diasAtras = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
-
-// Login invisível: sem tela, sem conta Google — só pra regra do Firestore
-// não ficar 100% aberta pra qualquer bot que ache a URL.
-auth.signInAnonymously().catch((e) => console.error("Falha no login anônimo:", e));
 
 function liberarAcesso() {
   $("#tela-login").hidden = true;
@@ -101,23 +92,58 @@ function checarSenha() {
   return false;
 }
 
+// A senha funciona mesmo se o Firebase abaixo estiver mal configurado ainda
+// (o form é vinculado antes de qualquer chamada ao Firebase, de propósito).
 $("#form-senha").onsubmit = (e) => {
   e.preventDefault();
   const valor = $("#input-senha").value;
   if (valor === SENHA_ACESSO) {
     localStorage.setItem(CHAVE_LOCALSTORAGE, "ok");
+    localStorage.removeItem(CHAVE_LOCALSTORAGE + "-motivo");
     liberarAcesso();
   } else {
     $("#erro-senha").hidden = false;
   }
 };
+checarSenha();
 
-auth.onAuthStateChanged(async (user) => {
-  if (!user) return;
-  await carregarEstado();
-  render();
-  checarSenha();
-});
+// --- Firebase (config + auth anônimo) ---
+// Tudo isolado num try/catch: se o Firebase ainda não foi configurado
+// (firebase-config.js com valores vazios) ou a chave for inválida, isso NÃO
+// pode travar o resto do script — senão nem a senha funciona.
+let auth, db, docRef;
+try {
+  firebase.initializeApp(window.FIREBASE_CONFIG);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  docRef = db.collection("trec-social-radar").doc("dados");
+
+  // Login invisível: sem tela, sem conta Google — só pra regra do Firestore
+  // não ficar 100% aberta pra qualquer bot que ache a URL.
+  auth.signInAnonymously().catch((e) => {
+    console.error("Falha no login anônimo (Firebase configurado?):", e);
+    mostrarAvisoFirebase();
+  });
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) return;
+    await carregarEstado();
+    render();
+    checarSenha();
+  });
+} catch (e) {
+  console.error("Firebase não inicializou (config ainda vazia em firebase-config.js?):", e);
+  mostrarAvisoFirebase();
+}
+
+function mostrarAvisoFirebase() {
+  if ($("#aviso-firebase")) return;
+  const aviso = document.createElement("p");
+  aviso.id = "aviso-firebase";
+  aviso.style.cssText = "color: var(--vermelho); font-size: 12px; margin-top: 16px; max-width: 320px;";
+  aviso.textContent = "Firebase ainda não configurado (firebase-config.js) — a senha funciona, mas os dados não vão carregar/salvar até isso ser preenchido.";
+  $("#tela-login").appendChild(aviso);
+}
 
 async function carregarEstado() {
   const snap = await docRef.get();
