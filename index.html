@@ -107,6 +107,39 @@
 
   .vazio { text-align: center; color: var(--muted); padding: 40px 0; }
 
+  .tarefas { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .tarefas__lista { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+  .tarefa-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .tarefa-item--feita span { text-decoration: line-through; color: var(--muted); }
+  .tarefa-item span { flex: 1; }
+  .tarefas__form input {
+    width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px dashed var(--border);
+    background: transparent; color: var(--fg); font-family: 'Archivo Narrow'; font-size: 13px;
+  }
+
+  #modal-relatorio {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; z-index: 10; overflow-y: auto;
+  }
+  #modal-relatorio .painel { background: var(--card-bg); border-radius: 12px; padding: 28px; max-width: 640px; width: 100%; }
+  .relatorio-datas { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0 18px; }
+  .relatorio-datas input { padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); }
+  .relatorio-rede { margin-bottom: 18px; }
+  .top-posts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .top-post { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; }
+  .top-post img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; }
+  .relatorio-tarefas ul { margin: 4px 0 12px; padding-left: 18px; font-size: 13px; }
+  .resumo-ia { font-size: 14px; line-height: 1.5; margin-top: 8px; }
+  .modal-acoes-topo { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+
+  @media print {
+    header.topo, .barra-controles, #custo-rodada, #clientes,
+    #modal-relatorio .modal-acoes-topo, #btn-fechar-relatorio, #btn-gerar-ia { display: none !important; }
+    body { background: #fff; color: #000; padding: 0; }
+    #modal-relatorio { position: static; background: none; padding: 0; }
+    #modal-relatorio .painel { max-width: 100%; box-shadow: none; }
+  }
+
   #modal-cliente {
     position: fixed; inset: 0; background: rgba(0,0,0,0.5);
     display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10;
@@ -132,8 +165,7 @@
     <img id="logo" src="assets/trec-horizontal-ink.png" alt="T-Rec Studio" />
   </div>
   <div style="display:flex; align-items:center; gap:12px;">
-    <span id="usuario-email" class="mono" style="font-size:12px; color:var(--muted);"></span>
-    <button id="btn-logout" class="btn btn--secundario">Sair</button>
+    <button id="btn-logout" class="btn btn--secundario">Sair desse aparelho</button>
   </div>
 </header>
 
@@ -141,7 +173,12 @@
   <h1>T-REC SOCIAL RADAR</h1>
   <p class="tag-studio">acompanhamento de clientes</p>
   <p style="margin: 20px 0; color: var(--muted);">Painel interno pra acompanhar seguidores e views médias dos clientes em Instagram, TikTok, YouTube e Facebook.</p>
-  <button id="btn-login">Entrar com Google</button>
+  <form id="form-senha">
+    <input id="input-senha" type="password" placeholder="Senha de acesso" required
+      style="padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--fg); font-family:'Archivo Narrow'; font-size:15px; width:100%; max-width:260px;" />
+    <p id="erro-senha" hidden style="color: var(--vermelho); font-size: 13px;">Senha errada.</p>
+    <button type="submit" style="margin-top:12px;">Entrar</button>
+  </form>
 </section>
 
 <main id="app" hidden>
@@ -179,6 +216,24 @@
         <button type="submit" class="btn">Salvar</button>
       </div>
     </form>
+  </div>
+</div>
+
+<div id="modal-relatorio" hidden>
+  <div class="painel">
+    <h2 id="relatorio-titulo">Relatório</h2>
+    <div class="relatorio-datas">
+      <label>De <input type="date" id="relatorio-inicio" /></label>
+      <label>até <input type="date" id="relatorio-fim" /></label>
+      <button id="btn-montar-relatorio" class="btn btn--secundario">Montar relatório</button>
+    </div>
+    <div id="relatorio-conteudo"></div>
+    <div id="relatorio-ia"></div>
+    <div class="modal-acoes-topo">
+      <button id="btn-gerar-ia" class="btn btn--secundario">Gerar resumo com IA</button>
+      <button id="btn-imprimir-relatorio" class="btn btn--secundario">Imprimir / Exportar PDF</button>
+      <button id="btn-fechar-relatorio" class="btn">Fechar</button>
+    </div>
   </div>
 </div>
 

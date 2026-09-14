@@ -1,14 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAllowed() {
-      return request.auth != null && request.auth.token.email in [
-        'contatogsfilmes@gmail.com'
-      ];
-    }
-
+    // Sem tela de login de verdade (só Biel + Duda usam) — o app loga anônimo
+    // sozinho (invisível) e pede uma senha simples compartilhada na tela,
+    // guardada no localStorage do navegador depois da 1a vez. Essa regra só
+    // garante que a chamada passou pelo SDK do Firebase (não é público total
+    // pra qualquer bot batendo direto na API).
     match /trec-social-radar/{doc} {
-      allow read, write: if isAllowed();
+      allow read, write: if request.auth != null;
     }
   }
 }

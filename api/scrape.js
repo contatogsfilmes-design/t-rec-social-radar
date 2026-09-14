@@ -1,8 +1,11 @@
-// Vercel Serverless Function — único lugar que conhece o APIFY_TOKEN.
+// Vercel Serverless Function — único lugar que conhece os tokens da Apify.
 // Recebe { network, handle, days } do front, chama o ator certo na Apify
 // via endpoint "run-sync-get-dataset-items" (roda e já devolve os itens,
 // sem precisar dar polling), normaliza e devolve seguidores + média de views
-// do período pedido.
+// + top 3 posts do período pedido.
+//
+// Suporta várias chaves da Apify (APIFY_TOKEN, APIFY_TOKEN_2, _3, _4): se uma
+// chave estiver sem crédito, tenta a próxima automaticamente.
 
 export const config = { maxDuration: 60 };
 
@@ -13,14 +16,16 @@ const ACTORS = {
   facebook: 'apify~facebook-pages-scraper',
 };
 
-// Custo aproximado por chamada, baseado em testes reais (ver histórico do projeto).
-// É estimativa pra mostrar na UI — o saldo exato fica no console da Apify.
 const CUSTO_ESTIMADO = {
   instagram: () => 0.003,
   tiktok: (n) => 0.003 + n * 0.0035,
   youtube: (n) => 0.003 + n * 0.0035,
   facebook: () => 0,
 };
+
+function tokensDisponiveis() {
+  return [process.env.APIFY_TOKEN, process.env.APIFY_TOKEN_2, process.env.APIFY_TOKEN_3, process.env.APIFY_TOKEN_4].filter(Boolean);
+}
 
 function itemLimitForDays(days) {
   if (days <= 7) return 10;
@@ -35,25 +40,51 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
+const SEM_CREDITO = /usage|limit|balance|credit|payment|monthly/i;
+
 async function callActor(actorId, input) {
-  const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${process.env.APIFY_TOKEN}`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
-  const data = await resp.json();
-  if (!resp.ok) {
-    const msg = Array.isArray(data) ? JSON.stringify(data) : data?.error?.message || `Apify respondeu ${resp.status}`;
-    throw new Error(msg);
+  const tokens = tokensDisponiveis();
+  if (!tokens.length) throw new Error('Nenhum APIFY_TOKEN configurado no Vercel.');
+
+  let ultimoErro;
+  for (let i = 0; i < tokens.length; i++) {
+    const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${tokens[i]}`;
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        const msg = Array.isArray(data) ? JSON.stringify(data) : data?.error?.message || `Apify respondeu ${resp.status}`;
+        // 401/402 ou mensagem de limite/saldo -> tenta a próxima chave. Outros erros (perfil privado etc) não adianta trocar de chave.
+        if (resp.status === 401 || resp.status === 402 || SEM_CREDITO.test(msg)) {
+          ultimoErro = new Error(`chave ${i + 1}/${tokens.length} sem crédito: ${msg}`);
+          continue;
+        }
+        throw new Error(msg);
+      }
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      if (err.__naoTrocar) throw err;
+      ultimoErro = err;
+    }
   }
-  return Array.isArray(data) ? data : [];
+  throw ultimoErro || new Error('Todas as chaves da Apify falharam.');
 }
 
 function avg(nums) {
   const valid = nums.filter((n) => typeof n === 'number' && !Number.isNaN(n));
   if (!valid.length) return null;
   return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+}
+
+function topPosts(posts, n = 3) {
+  return posts
+    .filter((p) => typeof p.views === 'number')
+    .sort((a, b) => b.views - a.views)
+    .slice(0, n);
 }
 
 async function scrapeInstagram(handle) {
@@ -64,8 +95,16 @@ async function scrapeInstagram(handle) {
   });
   const perfil = items[0];
   if (!perfil) throw new Error('Perfil não encontrado ou privado.');
-  const posts = perfil.latestPosts || [];
-  return { seguidores: perfil.followersCount ?? null, posts: posts.map((p) => ({ views: p.videoViewCount, date: p.timestamp })) };
+  const posts = (perfil.latestPosts || []).map((p) => ({
+    url: p.url,
+    thumb: p.displayUrl,
+    views: p.videoViewCount ?? null,
+    likes: p.likesCount ?? null,
+    comments: p.commentsCount ?? null,
+    legenda: (p.caption || '').slice(0, 140),
+    date: p.timestamp,
+  }));
+  return { seguidores: perfil.followersCount ?? null, posts };
 }
 
 async function scrapeTiktok(handle, limit) {
@@ -76,7 +115,16 @@ async function scrapeTiktok(handle, limit) {
     shouldDownloadCovers: false,
   });
   const seguidores = items[0]?.authorMeta?.fans ?? null;
-  return { seguidores, posts: items.map((i) => ({ views: i.playCount, date: i.createTimeISO })) };
+  const posts = items.map((i) => ({
+    url: i.webVideoUrl,
+    thumb: i.videoMeta?.coverUrl,
+    views: i.playCount ?? null,
+    likes: i.diggCount ?? null,
+    comments: i.commentCount ?? null,
+    legenda: (i.text || '').slice(0, 140),
+    date: i.createTimeISO,
+  }));
+  return { seguidores, posts };
 }
 
 async function scrapeYoutube(handle, limit) {
@@ -85,7 +133,16 @@ async function scrapeYoutube(handle, limit) {
     maxResults: limit,
   });
   const seguidores = items[0]?.numberOfSubscribers ?? null;
-  return { seguidores, posts: items.map((i) => ({ views: i.viewCount, date: i.date })) };
+  const posts = items.map((i) => ({
+    url: i.url,
+    thumb: i.thumbnailUrl,
+    views: i.viewCount ?? null,
+    likes: i.likes ?? null,
+    comments: i.commentsCount ?? null,
+    legenda: (i.title || '').slice(0, 140),
+    date: i.date,
+  }));
+  return { seguidores, posts };
 }
 
 async function scrapeFacebook(handle) {
@@ -104,7 +161,6 @@ export default async function handler(req, res) {
   const { network, handle, days = 30 } = req.body || {};
   if (!network || !handle) return res.status(400).json({ ok: false, error: 'Faltou network ou handle.' });
   if (!ACTORS[network]) return res.status(400).json({ ok: false, error: `Rede desconhecida: ${network}` });
-  if (!process.env.APIFY_TOKEN) return res.status(500).json({ ok: false, error: 'APIFY_TOKEN não configurado no Vercel.' });
 
   const limit = itemLimitForDays(days);
   const cleanHandle = String(handle).trim().replace(/^@/, '');
@@ -128,6 +184,7 @@ export default async function handler(req, res) {
       mediaViews,
       postsNoPeriodo: postsNoPeriodo.length,
       totalPostsRetornados: resultado.posts.length,
+      topPosts: topPosts(postsNoPeriodo),
       custoEstimadoUsd: CUSTO_ESTIMADO[network](limit),
       periodoDias: days,
       atualizadoEm: new Date().toISOString(),

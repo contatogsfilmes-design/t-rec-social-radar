@@ -40,7 +40,7 @@ quando quiser em apify.com, sem assinatura.
 
 1. Criar projeto em [console.firebase.google.com](https://console.firebase.google.com) → nome sugerido `trec-social-radar`.
 2. **Firestore Database** → Criar banco de dados → modo produção → escolher região (ex: `southamerica-east1`).
-3. **Authentication** → Sign-in method → ativar **Google**.
+3. **Authentication** → Sign-in method → ativar **Anônimo** (Anonymous).
 4. **Configurações do projeto** → Seus apps → Web (`</>`) → registrar app → copiar o objeto de config gerado.
 5. Colar esse objeto em `firebase-config.js` (campos `apiKey`, `authDomain`, etc — não é segredo, pode ficar no repo público).
 6. **Firestore → Regras** → colar o conteúdo de `firestore.rules` deste projeto → Publicar.
@@ -49,7 +49,7 @@ quando quiser em apify.com, sem assinatura.
 
 1. Subir este projeto pro GitHub primeiro (passo 3).
 2. Em [vercel.com](https://vercel.com), importar o repositório.
-3. Nas configurações do projeto na Vercel → **Environment Variables** → adicionar `APIFY_TOKEN` com o seu token (o mesmo que já está no `.env` local).
+3. Nas configurações do projeto na Vercel → **Environment Variables** → adicionar `APIFY_TOKEN` com o seu token (o mesmo que já está no `.env` local). Se tiver mais contas Apify, adicionar também `APIFY_TOKEN_2`, `_3`, `_4` — o backend tenta na ordem e pula sozinho pra próxima quando uma ficar sem crédito no mês. Se quiser o resumo em texto gerado por IA no relatório, adicionar também `OPENAI_API_KEY`.
 4. Deploy. A Vercel vai gerar uma URL tipo `https://t-rec-social-radar.vercel.app`.
 5. Colar essa URL + `/api/scrape` em `firebase-config.js` → `window.SCRAPE_API_URL`.
 
@@ -67,13 +67,34 @@ problema).
 
 ## Uso do dia a dia
 
-1. Abrir o site, logar com Google (só e-mails na lista de `ALLOWED_EMAILS`
-   em `app.js` / `firestore.rules` entram).
+1. Abrir o site, digitar a senha de acesso (uma vez por navegador — fica
+   salva depois). Ver seção "Acesso" abaixo antes de mandar o link pra Duda.
 2. Escolher o período (7/14/30/60 dias).
 3. Marcar quais cliente+rede quer atualizar (ou "selecionar todos").
 4. Clicar "Atualizar selecionados" — o painel mostra ao vivo o que já
    terminou e o custo estimado da rodada.
 5. "+ Cliente" pra cadastrar um novo perfil a qualquer momento.
+6. Em cada card: "+ nova tarefa pendente" pra registrar o que falta fazer
+   pro cliente; marcar como feita quando concluir.
+7. Botão "relatório" no card abre a tela de relatório: escolher data
+   início/fim, "Montar relatório" (seguidores, views médias, top 3 posts do
+   período, tarefas concluídas/pendentes), "Gerar resumo com IA" (opcional,
+   precisa de `OPENAI_API_KEY`) e "Imprimir/Exportar PDF" pra apresentar ao
+   cliente.
+
+## Acesso
+
+Sem conta Google, sem tela de "login" de verdade — só um campo de senha
+simples (constante `SENHA_ACESSO` no topo de `app.js`), digitada uma vez por
+navegador (fica salva no localStorage depois). Por baixo dos panos o app
+também faz um login anônimo do Firebase (invisível, sem UI) só pra regra do
+Firestore não ficar 100% pública pra qualquer bot.
+
+**Isso não é segurança de verdade** — o repo é público, então a senha fica
+visível pra quem abrir o `app.js` no GitHub. É só um filtro contra achar o
+site por acaso, não contra alguém que queira mesmo entrar. Antes de mandar o
+link pra Duda: trocar `SENHA_ACESSO` em `app.js` pra uma senha combinada
+entre vocês (não precisa ser complexa, só não deixar a de exemplo).
 
 ## Limitações conhecidas (v1)
 
