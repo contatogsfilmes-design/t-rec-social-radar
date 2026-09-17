@@ -12,5 +12,5 @@ window.FIREBASE_CONFIG = {
 
 // URLs das functions na Vercel (essas sim têm os tokens secretos — Apify e
 // OpenAI —, guardados só nas variáveis de ambiente da Vercel, nunca aqui).
-window.SCRAPE_API_URL = "https://SEU-PROJETO.vercel.app/api/scrape";
-window.RELATORIO_API_URL = "https://SEU-PROJETO.vercel.app/api/relatorio";
+window.SCRAPE_API_URL = "https://t-rec-social-radar.vercel.app/api/scrape";
+window.RELATORIO_API_URL = "https://t-rec-social-radar.vercel.app/api/relatorio";
