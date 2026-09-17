@@ -205,14 +205,31 @@ function mostrarAvisoFirebase() {
   $("#tela-login").appendChild(aviso);
 }
 
+// "ultimos" (que carrega fotos em base64) NÃO fica dentro do documento
+// único — um documento do Firestore tem limite de 1MB, e só as fotos de
+// todos os clientes juntos já estouram isso fácil. Cada rede de cada
+// cliente vira um documento próprio (bem pequeno) na coleção
+// trec-social-radar-ultimos, então o crescimento é "pra fora" (mais
+// documentos), não "pra cima" (um documento cada vez maior).
+const ultimosCollRef = () => db.collection("trec-social-radar-ultimos");
+
 async function carregarEstado() {
   const snap = await docRef.get();
   if (snap.exists) {
-    estado = Object.assign({ clientes: {}, ultimos: {}, historico: [] }, snap.data());
+    estado = Object.assign({ clientes: {}, historico: [] }, snap.data());
   } else {
-    estado = { clientes: CLIENTES_PADRAO, ultimos: {}, historico: [] };
+    estado = { clientes: CLIENTES_PADRAO, historico: [] };
     await docRef.set(estado);
   }
+  estado.ultimos = {};
+  const ultimosSnap = await ultimosCollRef().get();
+  ultimosSnap.forEach((doc) => {
+    estado.ultimos[doc.id] = doc.data();
+  });
+}
+
+async function salvarUltimo(k, dados) {
+  await ultimosCollRef().doc(k).set(dados);
 }
 
 async function salvarEstado() {
@@ -221,7 +238,7 @@ async function salvarEstado() {
     throw new Error("Firebase não configurado");
   }
   try {
-    await docRef.set(estado);
+    await docRef.set({ clientes: estado.clientes, historico: estado.historico });
   } catch (e) {
     alert("Não deu pra salvar: " + e.message);
     throw e;
@@ -507,6 +524,9 @@ async function atualizarUm(k) {
       topPosts: data.topPosts || [],
       atualizadoEm: data.atualizadoEm,
     };
+    // salva na hora, num documento so dessa rede — nao espera o fim do lote
+    // (cada documento fica pequeno assim, mesmo com muitos clientes juntos)
+    await salvarUltimo(k, estado.ultimos[k]);
     // guarda so os numeros no historico (nao a foto/topPosts) pra nao inchar o documento
     estado.historico.push({
       clienteId,
@@ -819,23 +839,55 @@ $("#btn-imprimir-relatorio").onclick = () => window.print();
 // function da Vercel, usando Admin SDK server-side.
 const configDocRef = () => db.collection("trec-social-radar-config").doc("chaves");
 
-$("#btn-config").onclick = () => ($("#modal-config").hidden = false);
+// Se colar a URL inteira da Apify (jeito que já rolou antes: "https://api.
+// apify.com/v2/actors?token=apify_api_...") em vez de só o token, extrai só
+// o token — evita salvar lixo sem querer.
+function limparValorChave(valor) {
+  const v = valor.trim();
+  const match = v.match(/token=([^&\s]+)/);
+  return match ? match[1] : v;
+}
+
+// Confere se um valor "parece" ser o tipo certo de chave antes de salvar —
+// pega o caso (já aconteceu) do navegador autopreencher com a senha do
+// site em vez do token de verdade.
+function pareceChaveValida(nomeCampo, valor) {
+  if (nomeCampo.startsWith("APIFY_TOKEN")) return valor.startsWith("apify_api_");
+  if (nomeCampo === "OPENAI_API_KEY") return valor.startsWith("sk-");
+  if (nomeCampo === "ANTHROPIC_API_KEY") return valor.startsWith("sk-ant-");
+  return true;
+}
+
+$("#btn-config").onclick = () => {
+  $("#modal-config").hidden = false;
+  $("#aviso-config").hidden = true;
+};
 $("#btn-fechar-config").onclick = () => ($("#modal-config").hidden = true);
 $("#form-config").onsubmit = async (e) => {
   e.preventDefault();
   const campos = {
-    APIFY_TOKEN: $("#input-apify-1").value.trim(),
-    APIFY_TOKEN_2: $("#input-apify-2").value.trim(),
-    APIFY_TOKEN_3: $("#input-apify-3").value.trim(),
-    APIFY_TOKEN_4: $("#input-apify-4").value.trim(),
-    OPENAI_API_KEY: $("#input-openai").value.trim(),
-    ANTHROPIC_API_KEY: $("#input-anthropic").value.trim(),
+    APIFY_TOKEN: limparValorChave($("#input-apify-1").value),
+    APIFY_TOKEN_2: limparValorChave($("#input-apify-2").value),
+    APIFY_TOKEN_3: limparValorChave($("#input-apify-3").value),
+    APIFY_TOKEN_4: limparValorChave($("#input-apify-4").value),
+    OPENAI_API_KEY: limparValorChave($("#input-openai").value),
+    ANTHROPIC_API_KEY: limparValorChave($("#input-anthropic").value),
   };
   const preencher = Object.fromEntries(Object.entries(campos).filter(([, v]) => v));
   if (!Object.keys(preencher).length) {
     $("#modal-config").hidden = true;
     return;
   }
+
+  const suspeitos = Object.entries(preencher).filter(([nome, valor]) => !pareceChaveValida(nome, valor));
+  const avisoEl = $("#aviso-config");
+  if (suspeitos.length) {
+    avisoEl.hidden = false;
+    avisoEl.textContent = `Isso não parece um valor válido pra ${suspeitos.map(([n]) => n).join(", ")} (confere se não colou a coisa errada por engano). Nada foi salvo ainda — corrige e manda de novo.`;
+    return;
+  }
+  avisoEl.hidden = true;
+
   try {
     await configDocRef().set(preencher, { merge: true });
     alert("Chaves salvas.");

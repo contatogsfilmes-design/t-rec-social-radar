@@ -10,6 +10,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // Snapshot mais recente de cada cliente+rede (seguidores, foto, top
+    // posts) — 1 documento por rede pra nenhum deles chegar perto do
+    // limite de 1MB do Firestore (as fotos em base64 somadas de TODOS os
+    // clientes num documento só já estouravam isso).
+    match /trec-social-radar-ultimos/{doc} {
+      allow read, write: if request.auth != null;
+    }
+
     // Chaves de API (Apify/OpenAI/Anthropic) configuradas pela tela de
     // Configurações: só GRAVA, nunca deixa ler de volta pelo cliente — quem
     // lê de verdade é a function da Vercel via Admin SDK, server-side.

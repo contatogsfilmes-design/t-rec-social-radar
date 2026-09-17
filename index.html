@@ -304,19 +304,20 @@
       As chaves ficam guardadas de um jeito que nem esse painel consegue reler depois — só escreve.
       Se quiser trocar uma chave, é só digitar de novo por cima. Deixe em branco o que não quiser mexer.
     </p>
-    <form id="form-config">
+    <form id="form-config" autocomplete="off">
       <label>Apify — chave 1 (principal)</label>
-      <input type="password" id="input-apify-1" placeholder="apify_api_..." autocomplete="off" />
+      <input type="text" id="input-apify-1" name="trec-apify-1" placeholder="apify_api_..." autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" />
       <label>Apify — chave 2 (backup, opcional)</label>
-      <input type="password" id="input-apify-2" placeholder="apify_api_..." autocomplete="off" />
+      <input type="text" id="input-apify-2" name="trec-apify-2" placeholder="apify_api_..." autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" />
       <label>Apify — chave 3 (backup, opcional)</label>
-      <input type="password" id="input-apify-3" placeholder="apify_api_..." autocomplete="off" />
+      <input type="text" id="input-apify-3" name="trec-apify-3" placeholder="apify_api_..." autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" />
       <label>Apify — chave 4 (backup, opcional)</label>
-      <input type="password" id="input-apify-4" placeholder="apify_api_..." autocomplete="off" />
+      <input type="text" id="input-apify-4" name="trec-apify-4" placeholder="apify_api_..." autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" />
       <label>OpenAI API Key (opcional — relatórios/Dino)</label>
-      <input type="password" id="input-openai" placeholder="sk-..." autocomplete="off" />
+      <input type="text" id="input-openai" name="trec-openai" placeholder="sk-..." autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" />
       <label>Anthropic API Key (opcional — relatórios/Dino, melhor qualidade)</label>
-      <input type="password" id="input-anthropic" placeholder="sk-ant-..." autocomplete="off" />
+      <input type="text" id="input-anthropic" name="trec-anthropic" placeholder="sk-ant-..." autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" />
+      <p id="aviso-config" hidden style="color:var(--vermelho); font-size:12px;"></p>
       <div class="modal-acoes">
         <span class="espacador"></span>
         <button type="button" id="btn-fechar-config" class="btn btn--secundario">Fechar</button>
