@@ -64,6 +64,26 @@ const CLIENTES_PADRAO = {
     },
     tarefas: [],
   },
+  yabadoo: {
+    nome: "Yabadoo (@yabadoo.io)",
+    redes: {
+      instagram: { handle: "yabadoo.io", ativo: true },
+      tiktok: { handle: "", ativo: false },
+      youtube: { handle: "", ativo: false },
+      facebook: { handle: "", ativo: false },
+    },
+    tarefas: [],
+  },
+  pique: {
+    nome: "Pique (@iaipique)",
+    redes: {
+      instagram: { handle: "iaipique", ativo: true },
+      tiktok: { handle: "", ativo: false },
+      youtube: { handle: "", ativo: false },
+      facebook: { handle: "", ativo: false },
+    },
+    tarefas: [],
+  },
 };
 
 let estado = { clientes: {}, ultimos: {}, historico: [] };
@@ -417,7 +437,17 @@ async function atualizarUm(k) {
       topPosts: data.topPosts || [],
       atualizadoEm: data.atualizadoEm,
     };
-    estado.historico.push({ clienteId, network, ...estado.ultimos[k] });
+    // guarda so os numeros no historico (nao a foto/topPosts) pra nao inchar o documento
+    estado.historico.push({
+      clienteId,
+      network,
+      seguidores: data.seguidores,
+      seguindo: data.seguindo,
+      mediaViews: data.mediaViews,
+      postsNoPeriodo: data.postsNoPeriodo,
+      periodoDias: data.periodoDias,
+      atualizadoEm: data.atualizadoEm,
+    });
     if (estado.historico.length > 500) estado.historico = estado.historico.slice(-500);
     custoRodada += data.custoEstimadoUsd || 0;
   } catch (err) {

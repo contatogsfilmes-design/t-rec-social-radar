@@ -159,6 +159,25 @@ async function scrapeYoutube(handle, limit) {
   };
 }
 
+// As URLs de foto de perfil da Apify (Instagram/TikTok/Facebook) são
+// assinadas e expiram (parâmetro "oe=" na URL) — se guardássemos só a URL,
+// a foto pararia de aparecer depois de um tempo (e às vezes já falha na
+// hora, por hotlink). Baixamos os bytes aqui no servidor e devolvemos como
+// data URI: fica permanente e nunca depende de carregar de outro domínio.
+async function baixarFotoComoDataUri(url) {
+  if (!url) return null;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const tipo = resp.headers.get('content-type') || 'image/jpeg';
+    const buffer = Buffer.from(await resp.arrayBuffer());
+    if (buffer.length > 500_000) return null; // foto gigante demais, ignora em vez de inchar o Firestore
+    return `data:${tipo};base64,${buffer.toString('base64')}`;
+  } catch {
+    return null;
+  }
+}
+
 async function scrapeFacebook(handle) {
   const url = handle.startsWith('http') ? handle : `https://www.facebook.com/${handle}`;
   const items = await callActor(ACTORS.facebook, { startUrls: [{ url }], resultsLimit: 1 });
@@ -194,6 +213,7 @@ export default async function handler(req, res) {
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     const postsNoPeriodo = resultado.posts.filter((p) => p.date && new Date(p.date).getTime() >= cutoff);
     const mediaViews = avg(postsNoPeriodo.map((p) => p.views));
+    const fotoPerfil = await baixarFotoComoDataUri(resultado.fotoPerfil);
 
     return res.status(200).json({
       ok: true,
@@ -201,7 +221,7 @@ export default async function handler(req, res) {
       handle: cleanHandle,
       seguidores: resultado.seguidores,
       seguindo: resultado.seguindo,
-      fotoPerfil: resultado.fotoPerfil,
+      fotoPerfil,
       mediaViews,
       postsNoPeriodo: postsNoPeriodo.length,
       totalPostsRetornados: resultado.posts.length,
