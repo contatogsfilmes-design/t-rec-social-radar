@@ -23,9 +23,31 @@ const PERIODOS = [
   { dias: 60, label: "60 dias" },
 ];
 
+// Identidade visual de cada marca, pra tela do cliente ficar com a cara dele
+// (paletas achadas no cérebro — cada uma vem de um doc/HTML já existente).
+const TEMAS = {
+  beto: {
+    bg: "#0B1F33", fg: "#F5F8FA", accent: "#5DBB46", accent2: "#E8B84B",
+    fontDisplay: "Anton", fontBody: "Poppins",
+  },
+  pique: {
+    bg: "#0B2028", fg: "#F5F8FA", accent: "#EFA54D", accent2: "#ED703A",
+    fontDisplay: "Anton", fontBody: "Archivo Narrow",
+  },
+  yabadoo: {
+    bg: "#080614", fg: "#F4F0FF", accent: "#FFC107", accent2: "#5A33C9",
+    fontDisplay: "Baloo 2", fontBody: "DM Sans",
+  },
+  marcella: {
+    bg: "#FDFCFA", fg: "#211318", accent: "#ED4093", accent2: "#5C1F4E",
+    fontDisplay: "Playfair Display", fontBody: "Poppins",
+  },
+};
+
 const CLIENTES_PADRAO = {
   "beto-carvalho": {
     nome: "Beto Carvalho",
+    temaId: "beto",
     redes: {
       instagram: { handle: "betocarvalhoo", ativo: true },
       tiktok: { handle: "betocarvalhoagro", ativo: true },
@@ -36,6 +58,7 @@ const CLIENTES_PADRAO = {
   },
   rique: {
     nome: "Rique (@iairique)",
+    temaId: "pique",
     redes: {
       instagram: { handle: "iairique", ativo: true },
       tiktok: { handle: "iairique", ativo: true },
@@ -46,6 +69,7 @@ const CLIENTES_PADRAO = {
   },
   marco: {
     nome: "Marco (@iaimarco_)",
+    temaId: "pique",
     redes: {
       instagram: { handle: "iaimarco_", ativo: true },
       tiktok: { handle: "iaimarco", ativo: true },
@@ -56,6 +80,7 @@ const CLIENTES_PADRAO = {
   },
   "marcella-ferreira": {
     nome: "Marcella Ferreira",
+    temaId: "marcella",
     redes: {
       instagram: { handle: "marcellaferreira", ativo: true },
       tiktok: { handle: "marcelladobeco", ativo: true },
@@ -66,6 +91,7 @@ const CLIENTES_PADRAO = {
   },
   yabadoo: {
     nome: "Yabadoo (@yabadoo.io)",
+    temaId: "yabadoo",
     redes: {
       instagram: { handle: "yabadoo.io", ativo: true },
       tiktok: { handle: "yabadoo", ativo: true },
@@ -76,6 +102,7 @@ const CLIENTES_PADRAO = {
   },
   pique: {
     nome: "Pique (@iaipique)",
+    temaId: "pique",
     redes: {
       instagram: { handle: "iaipique", ativo: true },
       tiktok: { handle: "", ativo: false },
@@ -500,12 +527,28 @@ function abrirModalCliente(clienteId) {
 
 // --- Relatório de performance (pra apresentar ao cliente) ---
 
+function aplicarTema(clienteId) {
+  const el = $("#modal-relatorio");
+  const tema = TEMAS[estado.clientes[clienteId]?.temaId];
+  if (!tema) {
+    el.style.cssText = "";
+    return;
+  }
+  el.style.setProperty("--tema-bg", tema.bg);
+  el.style.setProperty("--tema-fg", tema.fg);
+  el.style.setProperty("--tema-accent", tema.accent);
+  el.style.setProperty("--tema-accent2", tema.accent2);
+  el.style.setProperty("--tema-font-display", `'${tema.fontDisplay}'`);
+  el.style.setProperty("--tema-font-body", `'${tema.fontBody}'`);
+}
+
 function abrirRelatorio(clienteId) {
   const cliente = estado.clientes[clienteId];
   const modal = $("#modal-relatorio");
   modal.hidden = false;
+  aplicarTema(clienteId);
   const avatar = avatarDoCliente(clienteId);
-  $("#relatorio-titulo").innerHTML = `${avatar ? `<img src="${avatar}" referrerpolicy="no-referrer" class="avatar-cliente" style="width:32px;height:32px;vertical-align:middle;margin-right:8px;" alt="" />` : ""}Dashboard — ${cliente.nome}`;
+  $("#relatorio-titulo").innerHTML = `${avatar ? `<img src="${avatar}" referrerpolicy="no-referrer" class="avatar-cliente" style="width:32px;height:32px;vertical-align:middle;margin-right:8px;" alt="" />` : ""}${cliente.nome}`;
   $("#relatorio-inicio").value = diasAtras(periodoSelecionado);
   $("#relatorio-fim").value = hoje();
   $("#relatorio-ia").innerHTML = "";
@@ -722,4 +765,39 @@ $("#btn-desmarcar-todos").onclick = () => marcarTodos(false);
 $("#btn-novo-cliente").onclick = () => abrirModalCliente(null);
 $("#btn-fechar-modal").onclick = () => ($("#modal-cliente").hidden = true);
 $("#btn-fechar-relatorio").onclick = () => ($("#modal-relatorio").hidden = true);
+$("#btn-voltar-cliente").onclick = () => ($("#modal-relatorio").hidden = true);
 $("#btn-imprimir-relatorio").onclick = () => window.print();
+
+// --- Configurações (chaves de API) ---
+// Escreve num documento que a regra do Firestore deixa só GRAVAR, nunca ler
+// de volta pelo cliente — assim a chave não fica exposta pra quem abrir o
+// devtools ou olhar esse app.js (que é público). Quem lê de verdade é a
+// function da Vercel, usando Admin SDK server-side.
+const configDocRef = () => db.collection("trec-social-radar-config").doc("chaves");
+
+$("#btn-config").onclick = () => ($("#modal-config").hidden = false);
+$("#btn-fechar-config").onclick = () => ($("#modal-config").hidden = true);
+$("#form-config").onsubmit = async (e) => {
+  e.preventDefault();
+  const campos = {
+    APIFY_TOKEN: $("#input-apify-1").value.trim(),
+    APIFY_TOKEN_2: $("#input-apify-2").value.trim(),
+    APIFY_TOKEN_3: $("#input-apify-3").value.trim(),
+    APIFY_TOKEN_4: $("#input-apify-4").value.trim(),
+    OPENAI_API_KEY: $("#input-openai").value.trim(),
+    ANTHROPIC_API_KEY: $("#input-anthropic").value.trim(),
+  };
+  const preencher = Object.fromEntries(Object.entries(campos).filter(([, v]) => v));
+  if (!Object.keys(preencher).length) {
+    $("#modal-config").hidden = true;
+    return;
+  }
+  try {
+    await configDocRef().set(preencher, { merge: true });
+    alert("Chaves salvas.");
+    $("#form-config").reset();
+    $("#modal-config").hidden = true;
+  } catch (err) {
+    alert("Não deu pra salvar: " + err.message);
+  }
+};

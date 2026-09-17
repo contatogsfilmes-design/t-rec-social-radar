@@ -9,5 +9,14 @@ service cloud.firestore {
     match /trec-social-radar/{doc} {
       allow read, write: if request.auth != null;
     }
+
+    // Chaves de API (Apify/OpenAI/Anthropic) configuradas pela tela de
+    // Configurações: só GRAVA, nunca deixa ler de volta pelo cliente — quem
+    // lê de verdade é a function da Vercel via Admin SDK, server-side.
+    match /trec-social-radar-config/{doc} {
+      allow get, list: if false;
+      allow create, update: if request.auth != null;
+      allow delete: if false;
+    }
   }
 }

@@ -6,7 +6,7 @@
 <title>T-Rec Social Radar</title>
 <link rel="icon" href="assets/favicon-src.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Archivo+Narrow:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Bungee&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Archivo+Narrow:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Bungee&family=Poppins:wght@400;500;600;700&family=Baloo+2:wght@500;700&family=DM+Sans:wght@400;500;700&family=Playfair+Display:ital,wght@0,600;1,700&display=swap" rel="stylesheet" />
 <style>
   :root {
     --creme: #F2E6C9;
@@ -121,46 +121,61 @@
   }
 
   #modal-relatorio {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-    display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; z-index: 10; overflow-y: auto;
+    position: fixed; inset: 0; z-index: 10; overflow-y: auto;
+    background: var(--tema-bg, var(--bg)); color: var(--tema-fg, var(--fg));
+    font-family: var(--tema-font-body, 'Archivo Narrow'), sans-serif;
   }
-  #modal-relatorio .painel { background: var(--card-bg); border-radius: 12px; padding: 28px; max-width: 640px; width: 100%; }
+  #modal-relatorio h1, #modal-relatorio h2, #modal-relatorio h3, #modal-relatorio h4 {
+    font-family: var(--tema-font-display, 'Anton'), sans-serif; font-weight: 400;
+  }
+  #modal-relatorio .barra-topo-cliente {
+    position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 14px;
+    padding: 16px 24px; background: var(--tema-bg, var(--bg));
+    border-bottom: 2px solid var(--tema-accent, var(--laranja));
+  }
+  #btn-voltar-cliente {
+    background: var(--tema-accent, var(--laranja)); color: #fff; border: none; border-radius: 8px;
+    padding: 8px 16px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  #modal-relatorio .painel { max-width: 760px; width: 100%; margin: 0 auto; padding: 28px 24px 60px; }
   .relatorio-datas { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0 18px; }
   .relatorio-datas input { padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); }
   .resumo-numeros { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 20px; }
-  .resumo-numero { background: var(--bg); border-radius: 10px; padding: 12px 18px; display: flex; flex-direction: column; min-width: 140px; }
-  .resumo-valor { font-family: 'Anton'; font-size: 28px; color: var(--laranja); }
+  .resumo-numero { background: color-mix(in srgb, var(--tema-fg, var(--fg)) 8%, transparent); border-radius: 10px; padding: 12px 18px; display: flex; flex-direction: column; min-width: 140px; }
+  .resumo-valor { font-family: var(--tema-font-display, 'Anton'); font-size: 28px; color: var(--tema-accent, var(--laranja)); }
   .resumo-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
   .relatorio-rede { margin-bottom: 18px; }
   .top-posts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
   .top-post { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; }
   .top-post img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; }
-  .top-post--melhor { background: color-mix(in srgb, var(--mostarda) 15%, transparent); border-radius: 8px; padding: 8px; margin: -8px -8px 0; }
+  .top-post--melhor { background: color-mix(in srgb, var(--tema-accent2, var(--mostarda)) 20%, transparent); border-radius: 8px; padding: 8px; margin: -8px -8px 0; }
   .top-post--melhor img { width: 80px; height: 80px; }
-  .top-post--melhor b { color: var(--mostarda); }
+  .top-post--melhor b { color: var(--tema-accent2, var(--mostarda)); }
   .relatorio-tarefas ul { margin: 4px 0 12px; padding-left: 18px; font-size: 13px; }
   .resumo-ia { font-size: 14px; line-height: 1.5; margin-top: 8px; }
   .modal-acoes-topo { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+  #modal-relatorio .btn { background: var(--tema-accent, var(--laranja)); }
+  #modal-relatorio .btn--secundario { background: transparent; border-color: var(--tema-fg, var(--fg)); color: var(--tema-fg, var(--fg)); }
 
   @media print {
     header.topo, .barra-controles, #custo-rodada, #clientes,
     #modal-relatorio .modal-acoes-topo, #btn-fechar-relatorio, #btn-gerar-ia,
-    #btn-dino, #painel-dino { display: none !important; }
+    #btn-dino, #painel-dino, .barra-topo-cliente { display: none !important; }
     body { background: #fff; color: #000; padding: 0; }
     #modal-relatorio { position: static; background: none; padding: 0; }
     #modal-relatorio .painel { max-width: 100%; box-shadow: none; }
   }
 
-  #modal-cliente {
+  #modal-cliente, #modal-config {
     position: fixed; inset: 0; background: rgba(0,0,0,0.5);
     display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10;
   }
-  #modal-cliente .painel {
+  #modal-cliente .painel, #modal-config .painel {
     background: var(--card-bg); border-radius: 12px; padding: 24px; max-width: 420px; width: 100%;
     max-height: 90vh; overflow-y: auto;
   }
-  #modal-cliente label { display: block; font-size: 13px; margin: 12px 0 4px; color: var(--muted); }
-  #modal-cliente input {
+  #modal-cliente label, #modal-config label { display: block; font-size: 13px; margin: 12px 0 4px; color: var(--muted); }
+  #modal-cliente input, #modal-config input {
     width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border);
     background: var(--bg); color: var(--fg); font-family: 'Archivo Narrow'; font-size: 15px;
   }
@@ -200,6 +215,7 @@
     <img id="logo" src="assets/trec-horizontal-ink.png" alt="T-Rec Studio" />
   </div>
   <div style="display:flex; align-items:center; gap:12px;">
+    <button id="btn-config" class="icon-btn" title="Configurações / chaves de API" style="font-size:20px;">⚙️</button>
     <button id="btn-logout" class="btn btn--secundario">Sair desse aparelho</button>
   </div>
 </header>
@@ -255,8 +271,11 @@
 </div>
 
 <div id="modal-relatorio" hidden>
+  <div class="barra-topo-cliente">
+    <button id="btn-voltar-cliente">← Voltar</button>
+    <h2 id="relatorio-titulo" style="margin:0; font-size:20px;">Dashboard</h2>
+  </div>
   <div class="painel">
-    <h2 id="relatorio-titulo">Relatório</h2>
     <div class="relatorio-datas">
       <label>De <input type="date" id="relatorio-inicio" /></label>
       <label>até <input type="date" id="relatorio-fim" /></label>
@@ -269,6 +288,35 @@
       <button id="btn-imprimir-relatorio" class="btn btn--secundario">Imprimir / Exportar PDF</button>
       <button id="btn-fechar-relatorio" class="btn">Fechar</button>
     </div>
+  </div>
+</div>
+
+<div id="modal-config" hidden>
+  <div class="painel">
+    <h2>Configurações</h2>
+    <p style="color:var(--muted); font-size:13px; margin-top:-8px;">
+      As chaves ficam guardadas de um jeito que nem esse painel consegue reler depois — só escreve.
+      Se quiser trocar uma chave, é só digitar de novo por cima. Deixe em branco o que não quiser mexer.
+    </p>
+    <form id="form-config">
+      <label>Apify — chave 1 (principal)</label>
+      <input type="password" id="input-apify-1" placeholder="apify_api_..." autocomplete="off" />
+      <label>Apify — chave 2 (backup, opcional)</label>
+      <input type="password" id="input-apify-2" placeholder="apify_api_..." autocomplete="off" />
+      <label>Apify — chave 3 (backup, opcional)</label>
+      <input type="password" id="input-apify-3" placeholder="apify_api_..." autocomplete="off" />
+      <label>Apify — chave 4 (backup, opcional)</label>
+      <input type="password" id="input-apify-4" placeholder="apify_api_..." autocomplete="off" />
+      <label>OpenAI API Key (opcional — relatórios/Dino)</label>
+      <input type="password" id="input-openai" placeholder="sk-..." autocomplete="off" />
+      <label>Anthropic API Key (opcional — relatórios/Dino, melhor qualidade)</label>
+      <input type="password" id="input-anthropic" placeholder="sk-ant-..." autocomplete="off" />
+      <div class="modal-acoes">
+        <span class="espacador"></span>
+        <button type="button" id="btn-fechar-config" class="btn btn--secundario">Fechar</button>
+        <button type="submit" class="btn">Salvar chaves</button>
+      </div>
+    </form>
   </div>
 </div>
 
