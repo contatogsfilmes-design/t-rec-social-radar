@@ -55,6 +55,10 @@ const TEMAS = {
     bg: "#FDFCFA", fg: "#211318", accent: "#ED4093", accent2: "#5C1F4E",
     fontDisplay: "Playfair Display", fontBody: "Poppins",
   },
+  trec: {
+    bg: "#141110", fg: "#F2E6C9", accent: "#ED703A", accent2: "#2B6F6A",
+    fontDisplay: "Anton", fontBody: "Archivo Narrow",
+  },
 };
 
 const CLIENTES_PADRAO = {
@@ -119,6 +123,17 @@ const CLIENTES_PADRAO = {
     redes: {
       instagram: { handle: "iaipique", ativo: true },
       tiktok: { handle: "", ativo: false },
+      youtube: { handle: "", ativo: false },
+      facebook: { handle: "", ativo: false },
+    },
+    tarefas: [],
+  },
+  "trec-studio": {
+    nome: "T-Rec Studio (@t_recstudio)",
+    temaId: "trec",
+    redes: {
+      instagram: { handle: "t_recstudio", ativo: true },
+      tiktok: { handle: "", ativo: false }, // ainda vai gravar, adicionar handle quando tiver
       youtube: { handle: "", ativo: false },
       facebook: { handle: "", ativo: false },
     },
