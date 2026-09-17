@@ -38,7 +38,7 @@ const CLIENTES_PADRAO = {
     nome: "Rique (@iairique)",
     redes: {
       instagram: { handle: "iairique", ativo: true },
-      tiktok: { handle: "", ativo: false },
+      tiktok: { handle: "iairique", ativo: true },
       youtube: { handle: "", ativo: false },
       facebook: { handle: "", ativo: false },
     },
@@ -48,7 +48,7 @@ const CLIENTES_PADRAO = {
     nome: "Marco (@iaimarco_)",
     redes: {
       instagram: { handle: "iaimarco_", ativo: true },
-      tiktok: { handle: "", ativo: false },
+      tiktok: { handle: "iaimarco", ativo: true },
       youtube: { handle: "", ativo: false },
       facebook: { handle: "", ativo: false },
     },
@@ -58,7 +58,7 @@ const CLIENTES_PADRAO = {
     nome: "Marcella Ferreira",
     redes: {
       instagram: { handle: "marcellaferreira", ativo: true },
-      tiktok: { handle: "", ativo: false },
+      tiktok: { handle: "marcelladobeco", ativo: true },
       youtube: { handle: "", ativo: false },
       facebook: { handle: "", ativo: false },
     },
@@ -206,13 +206,27 @@ function renderClientes() {
   });
 }
 
+function avatarDoCliente(clienteId) {
+  for (const rede of REDES) {
+    const foto = estado.ultimos[chave(clienteId, rede.id)]?.fotoPerfil;
+    if (foto) return foto;
+  }
+  return null;
+}
+
 function cardCliente(clienteId, cliente) {
   const card = document.createElement("div");
   card.className = "card";
 
   const header = document.createElement("div");
   header.className = "card__header";
-  header.innerHTML = `<h3>${cliente.nome}</h3>`;
+  const avatar = avatarDoCliente(clienteId);
+  header.innerHTML = `
+    <div style="display:flex; align-items:center; gap:10px;">
+      ${avatar ? `<img src="${avatar}" class="avatar-cliente" referrerpolicy="no-referrer" alt="" />` : `<div class="avatar-cliente avatar-cliente--vazio"></div>`}
+      <h3>${cliente.nome}</h3>
+    </div>
+  `;
   const acoes = document.createElement("div");
   acoes.style.display = "flex";
   acoes.style.gap = "10px";
@@ -263,6 +277,7 @@ function cardCliente(clienteId, cliente) {
           : ultimo
           ? `<span class="rede-metricas">
               <b>${fmtNum(ultimo.seguidores)}</b> seguidores
+              ${ultimo.seguindo !== null && ultimo.seguindo !== undefined ? ` · <b>${fmtNum(ultimo.seguindo)}</b> seguindo` : ""}
               ${ultimo.mediaViews !== null && ultimo.mediaViews !== undefined ? ` · <b>${fmtNum(ultimo.mediaViews)}</b> views médias (${ultimo.postsNoPeriodo} posts/${ultimo.periodoDias}d)` : ""}
               <span class="rede-data">atualizado ${new Date(ultimo.atualizadoEm).toLocaleString("pt-BR")}</span>
              </span>`
@@ -394,6 +409,8 @@ async function atualizarUm(k) {
 
     estado.ultimos[k] = {
       seguidores: data.seguidores,
+      seguindo: data.seguindo,
+      fotoPerfil: data.fotoPerfil,
       mediaViews: data.mediaViews,
       postsNoPeriodo: data.postsNoPeriodo,
       periodoDias: data.periodoDias,
@@ -481,10 +498,10 @@ function montarRelatorio(clienteId) {
       const top = (ultimo.topPosts || [])
         .map(
           (p, i) => `
-        <div class="top-post">
-          ${p.thumb ? `<img src="${p.thumb}" alt="" />` : ""}
+        <div class="top-post${i === 0 ? " top-post--melhor" : ""}">
+          ${p.thumb ? `<img src="${p.thumb}" referrerpolicy="no-referrer" alt="" />` : ""}
           <div>
-            <b>#${i + 1}</b> — ${fmtNum(p.views)} views, ${fmtNum(p.likes)} likes<br/>
+            <b>${i === 0 ? "🏆 Melhor do período" : `#${i + 1}`}</b> — ${fmtNum(p.views)} views, ${fmtNum(p.likes)} likes<br/>
             <span class="rede-handle">${(p.legenda || "").slice(0, 90)}</span>
             ${p.url ? `<br/><a href="${p.url}" target="_blank" rel="noopener">ver post</a>` : ""}
           </div>
@@ -493,8 +510,11 @@ function montarRelatorio(clienteId) {
         .join("");
       return `
       <div class="relatorio-rede">
-        <h4 style="color:${rede.cor}">${rede.label}</h4>
-        <p><b class="mono">${fmtNum(ultimo.seguidores)}</b> seguidores · <b class="mono">${fmtNum(ultimo.mediaViews)}</b> views médias/post (${ultimo.postsNoPeriodo} posts, últimos ${ultimo.periodoDias} dias)</p>
+        <h4 style="color:${rede.cor}">
+          ${ultimo.fotoPerfil ? `<img src="${ultimo.fotoPerfil}" referrerpolicy="no-referrer" class="avatar-inline" alt="" />` : ""}
+          ${rede.label}
+        </h4>
+        <p><b class="mono">${fmtNum(ultimo.seguidores)}</b> seguidores${ultimo.seguindo !== null && ultimo.seguindo !== undefined ? ` · <b class="mono">${fmtNum(ultimo.seguindo)}</b> seguindo` : ""} · <b class="mono">${fmtNum(ultimo.mediaViews)}</b> views médias/post (${ultimo.postsNoPeriodo} posts, últimos ${ultimo.periodoDias} dias)</p>
         ${top ? `<div class="top-posts">${top}</div>` : ""}
       </div>`;
     })

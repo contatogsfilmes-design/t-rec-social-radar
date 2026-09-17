@@ -1,8 +1,8 @@
 // Vercel Serverless Function — único lugar que conhece os tokens da Apify.
 // Recebe { network, handle, days } do front, chama o ator certo na Apify
 // via endpoint "run-sync-get-dataset-items" (roda e já devolve os itens,
-// sem precisar dar polling), normaliza e devolve seguidores + média de views
-// + top 3 posts do período pedido.
+// sem precisar dar polling), normaliza e devolve seguidores + seguindo +
+// foto de perfil + média de views + top 3 posts do período pedido.
 //
 // Suporta várias chaves da Apify (APIFY_TOKEN, APIFY_TOKEN_2, _3, _4): se uma
 // chave estiver sem crédito, tenta a próxima automaticamente.
@@ -104,7 +104,12 @@ async function scrapeInstagram(handle) {
     legenda: (p.caption || '').slice(0, 140),
     date: p.timestamp,
   }));
-  return { seguidores: perfil.followersCount ?? null, posts };
+  return {
+    seguidores: perfil.followersCount ?? null,
+    seguindo: perfil.followsCount ?? null,
+    fotoPerfil: perfil.profilePicUrlHD || perfil.profilePicUrl || null,
+    posts,
+  };
 }
 
 async function scrapeTiktok(handle, limit) {
@@ -114,7 +119,7 @@ async function scrapeTiktok(handle, limit) {
     shouldDownloadVideos: false,
     shouldDownloadCovers: false,
   });
-  const seguidores = items[0]?.authorMeta?.fans ?? null;
+  const autor = items[0]?.authorMeta;
   const posts = items.map((i) => ({
     url: i.webVideoUrl,
     thumb: i.videoMeta?.coverUrl,
@@ -124,7 +129,12 @@ async function scrapeTiktok(handle, limit) {
     legenda: (i.text || '').slice(0, 140),
     date: i.createTimeISO,
   }));
-  return { seguidores, posts };
+  return {
+    seguidores: autor?.fans ?? null,
+    seguindo: autor?.following ?? null,
+    fotoPerfil: autor?.avatar || null,
+    posts,
+  };
 }
 
 async function scrapeYoutube(handle, limit) {
@@ -132,7 +142,6 @@ async function scrapeYoutube(handle, limit) {
     startUrls: [{ url: `https://www.youtube.com/@${handle}` }],
     maxResults: limit,
   });
-  const seguidores = items[0]?.numberOfSubscribers ?? null;
   const posts = items.map((i) => ({
     url: i.url,
     thumb: i.thumbnailUrl,
@@ -142,7 +151,12 @@ async function scrapeYoutube(handle, limit) {
     legenda: (i.title || '').slice(0, 140),
     date: i.date,
   }));
-  return { seguidores, posts };
+  return {
+    seguidores: items[0]?.numberOfSubscribers ?? null,
+    seguindo: null, // canal do YouTube não tem "seguindo"
+    fotoPerfil: items[0]?.channelAvatarUrl || null,
+    posts,
+  };
 }
 
 async function scrapeFacebook(handle) {
@@ -150,7 +164,12 @@ async function scrapeFacebook(handle) {
   const items = await callActor(ACTORS.facebook, { startUrls: [{ url }], resultsLimit: 1 });
   const pagina = items[0];
   if (!pagina) throw new Error('Página não encontrada.');
-  return { seguidores: pagina.followers ?? pagina.likes ?? null, posts: [] };
+  return {
+    seguidores: pagina.followers ?? pagina.likes ?? null,
+    seguindo: pagina.followings ?? null,
+    fotoPerfil: pagina.profilePictureUrl || null,
+    posts: [],
+  };
 }
 
 export default async function handler(req, res) {
@@ -181,6 +200,8 @@ export default async function handler(req, res) {
       network,
       handle: cleanHandle,
       seguidores: resultado.seguidores,
+      seguindo: resultado.seguindo,
+      fotoPerfil: resultado.fotoPerfil,
       mediaViews,
       postsNoPeriodo: postsNoPeriodo.length,
       totalPostsRetornados: resultado.posts.length,

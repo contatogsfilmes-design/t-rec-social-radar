@@ -92,6 +92,9 @@
   #clientes { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
   .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
   .card__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .avatar-cliente { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--laranja); flex-shrink: 0; }
+  .avatar-cliente--vazio { background: var(--border); }
+  .avatar-inline { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 6px; border: 1px solid var(--border); }
   .icon-btn { background: none; border: none; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 12px; font-family: 'Archivo Narrow'; }
 
   .rede-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--border); cursor: pointer; }
@@ -128,6 +131,9 @@
   .top-posts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
   .top-post { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; }
   .top-post img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; }
+  .top-post--melhor { background: color-mix(in srgb, var(--mostarda) 15%, transparent); border-radius: 8px; padding: 8px; margin: -8px -8px 0; }
+  .top-post--melhor img { width: 80px; height: 80px; }
+  .top-post--melhor b { color: var(--mostarda); }
   .relatorio-tarefas ul { margin: 4px 0 12px; padding-left: 18px; font-size: 13px; }
   .resumo-ia { font-size: 14px; line-height: 1.5; margin-top: 8px; }
   .modal-acoes-topo { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
