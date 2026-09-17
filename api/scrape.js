@@ -218,6 +218,13 @@ export default async function handler(req, res) {
     const mediaViews = avg(postsNoPeriodo.map((p) => p.views));
     const fotoPerfil = await baixarFotoComoDataUri(resultado.fotoPerfil);
 
+    // top 3 só (não vale a pena baixar thumb de todo mundo) — mesmo motivo
+    // da foto de perfil: link do Instagram/Facebook expira ou dá hotlink block
+    const top3 = topPosts(postsNoPeriodo);
+    for (const post of top3) {
+      post.thumb = await baixarFotoComoDataUri(post.thumb);
+    }
+
     return res.status(200).json({
       ok: true,
       network,
@@ -228,7 +235,7 @@ export default async function handler(req, res) {
       mediaViews,
       postsNoPeriodo: postsNoPeriodo.length,
       totalPostsRetornados: resultado.posts.length,
-      topPosts: topPosts(postsNoPeriodo),
+      topPosts: top3,
       custoEstimadoUsd: CUSTO_ESTIMADO[network](limit),
       periodoDias: days,
       atualizadoEm: new Date().toISOString(),
