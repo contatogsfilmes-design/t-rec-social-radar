@@ -30,11 +30,15 @@ async function tokensDisponiveis() {
   return [chaves.APIFY_TOKEN, chaves.APIFY_TOKEN_2, chaves.APIFY_TOKEN_3, chaves.APIFY_TOKEN_4].filter(Boolean);
 }
 
+// Pega itens suficientes pra cobrir o período pedido E o período anterior
+// (mesmo tamanho, logo antes) — assim dá pra comparar "esse mês vs mês
+// passado" sem precisar de uma segunda chamada na Apify.
 function itemLimitForDays(days) {
-  if (days <= 7) return 10;
-  if (days <= 14) return 15;
-  if (days <= 30) return 30;
-  return 40;
+  const cobertura = days * 2;
+  if (cobertura <= 14) return 15;
+  if (cobertura <= 28) return 20;
+  if (cobertura <= 60) return 35;
+  return 50;
 }
 
 function setCors(res) {
@@ -81,6 +85,10 @@ function avg(nums) {
   const valid = nums.filter((n) => typeof n === 'number' && !Number.isNaN(n));
   if (!valid.length) return null;
   return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+}
+
+function soma(nums) {
+  return nums.filter((n) => typeof n === 'number' && !Number.isNaN(n)).reduce((a, b) => a + b, 0);
 }
 
 function topPosts(posts, n = 3) {
@@ -213,9 +221,22 @@ export default async function handler(req, res) {
     else if (network === 'youtube') resultado = await scrapeYoutube(cleanHandle, limit);
     else resultado = await scrapeFacebook(cleanHandle);
 
-    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    const postsNoPeriodo = resultado.posts.filter((p) => p.date && new Date(p.date).getTime() >= cutoff);
+    const umDia = 24 * 60 * 60 * 1000;
+    const cutoffAtual = Date.now() - days * umDia;
+    const cutoffAnterior = Date.now() - days * 2 * umDia;
+    const postsNoPeriodo = resultado.posts.filter((p) => p.date && new Date(p.date).getTime() >= cutoffAtual);
+    const postsPeriodoAnterior = resultado.posts.filter((p) => {
+      const t = p.date && new Date(p.date).getTime();
+      return t && t >= cutoffAnterior && t < cutoffAtual;
+    });
     const mediaViews = avg(postsNoPeriodo.map((p) => p.views));
+    const totalViewsPeriodo = soma(postsNoPeriodo.map((p) => p.views));
+    const totalViewsAnterior = soma(postsPeriodoAnterior.map((p) => p.views));
+    // só calcula variação se realmente tem dado do período anterior (senão
+    // "infinito%" de crescimento não quer dizer nada)
+    const variacaoViews = postsPeriodoAnterior.length && totalViewsAnterior > 0
+      ? Math.round(((totalViewsPeriodo - totalViewsAnterior) / totalViewsAnterior) * 100)
+      : null;
     const fotoPerfil = await baixarFotoComoDataUri(resultado.fotoPerfil);
 
     // top 3 só (não vale a pena baixar thumb de todo mundo) — mesmo motivo
@@ -233,6 +254,8 @@ export default async function handler(req, res) {
       seguindo: resultado.seguindo,
       fotoPerfil,
       mediaViews,
+      totalViewsPeriodo,
+      variacaoViews,
       postsNoPeriodo: postsNoPeriodo.length,
       totalPostsRetornados: resultado.posts.length,
       topPosts: top3,

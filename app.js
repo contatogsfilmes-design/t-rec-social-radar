@@ -9,12 +9,25 @@
 const SENHA_ACESSO = "Tatiane42@";
 const CHAVE_LOCALSTORAGE = "trec-social-radar-acesso";
 
+// Cores escolhidas pra ficarem legíveis em cima de fundo escuro (a marca
+// de cada rede, mas ajustada pro contraste — TikTok era quase preto sobre
+// preto, por exemplo).
 const REDES = [
   { id: "instagram", label: "Instagram", cor: "#ED703A" },
-  { id: "tiktok", label: "TikTok", cor: "#141110" },
-  { id: "youtube", label: "YouTube", cor: "#E5231B" },
-  { id: "facebook", label: "Facebook", cor: "#2B6F6A" },
+  { id: "tiktok", label: "TikTok", cor: "#25F4EE" },
+  { id: "youtube", label: "YouTube", cor: "#FF4B4B" },
+  { id: "facebook", label: "Facebook", cor: "#4E9AF1" },
 ];
+
+const COR_ALTA = "#3ECF6E";
+const COR_BAIXA = "#F14E4E";
+
+function setaVariacao(variacao) {
+  if (variacao === null || variacao === undefined) return "";
+  const cor = variacao >= 0 ? COR_ALTA : COR_BAIXA;
+  const seta = variacao >= 0 ? "▲" : "▼";
+  return ` <span style="color:${cor}; font-weight:700;">${seta} ${Math.abs(variacao)}%</span>`;
+}
 
 const PERIODOS = [
   { dias: 7, label: "7 dias" },
@@ -261,6 +274,25 @@ function avatarDoCliente(clienteId) {
   return null;
 }
 
+function resumoViewsCliente(clienteId) {
+  const cliente = estado.clientes[clienteId];
+  let total = 0;
+  let totalAnterior = 0;
+  let temDado = false;
+  REDES.forEach((rede) => {
+    const u = estado.ultimos[chave(clienteId, rede.id)];
+    if (!u || u.totalViewsPeriodo === null || u.totalViewsPeriodo === undefined) return;
+    temDado = true;
+    total += u.totalViewsPeriodo;
+    if (u.variacaoViews !== null && u.variacaoViews !== undefined) {
+      totalAnterior += u.totalViewsPeriodo / (1 + u.variacaoViews / 100);
+    }
+  });
+  if (!temDado) return null;
+  const variacao = totalAnterior > 0 ? Math.round(((total - totalAnterior) / totalAnterior) * 100) : null;
+  return { total, variacao };
+}
+
 function cardCliente(clienteId, cliente) {
   const card = document.createElement("div");
   card.className = "card";
@@ -268,10 +300,14 @@ function cardCliente(clienteId, cliente) {
   const header = document.createElement("div");
   header.className = "card__header";
   const avatar = avatarDoCliente(clienteId);
+  const resumo = resumoViewsCliente(clienteId);
   header.innerHTML = `
     <div class="card__identidade" style="display:flex; align-items:center; gap:10px; cursor:pointer;" title="Ver dashboard completo">
       ${avatar ? `<img src="${avatar}" class="avatar-cliente" referrerpolicy="no-referrer" alt="" />` : `<div class="avatar-cliente avatar-cliente--vazio"></div>`}
-      <h3>${cliente.nome}</h3>
+      <div>
+        <h3 style="margin:0;">${cliente.nome}</h3>
+        ${resumo ? `<span class="card__resumo-views"><b>${fmtNum(resumo.total)}</b> views no período${setaVariacao(resumo.variacao)}</span>` : ""}
+      </div>
     </div>
   `;
   header.querySelector(".card__identidade").onclick = () => abrirRelatorio(clienteId);
@@ -326,7 +362,11 @@ function cardCliente(clienteId, cliente) {
           ? `<span class="rede-metricas">
               <b>${fmtNum(ultimo.seguidores)}</b> seguidores
               ${ultimo.seguindo !== null && ultimo.seguindo !== undefined ? ` · <b>${fmtNum(ultimo.seguindo)}</b> seguindo` : ""}
-              ${ultimo.mediaViews !== null && ultimo.mediaViews !== undefined ? ` · <b>${fmtNum(ultimo.mediaViews)}</b> views médias (${ultimo.postsNoPeriodo} posts/${ultimo.periodoDias}d)` : ""}
+              ${
+                ultimo.totalViewsPeriodo !== null && ultimo.totalViewsPeriodo !== undefined
+                  ? ` · <b>${fmtNum(ultimo.totalViewsPeriodo)}</b> views no período${setaVariacao(ultimo.variacaoViews)}`
+                  : ""
+              }
               <span class="rede-data">atualizado ${new Date(ultimo.atualizadoEm).toLocaleString("pt-BR")}</span>
              </span>`
           : `<span class="rede-status">ainda não atualizado</span>`
@@ -460,6 +500,8 @@ async function atualizarUm(k) {
       seguindo: data.seguindo,
       fotoPerfil: data.fotoPerfil,
       mediaViews: data.mediaViews,
+      totalViewsPeriodo: data.totalViewsPeriodo,
+      variacaoViews: data.variacaoViews,
       postsNoPeriodo: data.postsNoPeriodo,
       periodoDias: data.periodoDias,
       topPosts: data.topPosts || [],
@@ -472,6 +514,8 @@ async function atualizarUm(k) {
       seguidores: data.seguidores,
       seguindo: data.seguindo,
       mediaViews: data.mediaViews,
+      totalViewsPeriodo: data.totalViewsPeriodo,
+      variacaoViews: data.variacaoViews,
       postsNoPeriodo: data.postsNoPeriodo,
       periodoDias: data.periodoDias,
       atualizadoEm: data.atualizadoEm,
