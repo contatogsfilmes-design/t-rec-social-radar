@@ -39,7 +39,7 @@ const CLIENTES_PADRAO = {
     redes: {
       instagram: { handle: "iairique", ativo: true },
       tiktok: { handle: "iairique", ativo: true },
-      youtube: { handle: "", ativo: false },
+      youtube: { handle: "iairique", ativo: true },
       facebook: { handle: "", ativo: false },
     },
     tarefas: [],
@@ -59,7 +59,7 @@ const CLIENTES_PADRAO = {
     redes: {
       instagram: { handle: "marcellaferreira", ativo: true },
       tiktok: { handle: "marcelladobeco", ativo: true },
-      youtube: { handle: "", ativo: false },
+      youtube: { handle: "marcellaferreira", ativo: true },
       facebook: { handle: "", ativo: false },
     },
     tarefas: [],
@@ -68,7 +68,7 @@ const CLIENTES_PADRAO = {
     nome: "Yabadoo (@yabadoo.io)",
     redes: {
       instagram: { handle: "yabadoo.io", ativo: true },
-      tiktok: { handle: "", ativo: false },
+      tiktok: { handle: "yabadoo", ativo: true },
       youtube: { handle: "", ativo: false },
       facebook: { handle: "", ativo: false },
     },
@@ -242,11 +242,12 @@ function cardCliente(clienteId, cliente) {
   header.className = "card__header";
   const avatar = avatarDoCliente(clienteId);
   header.innerHTML = `
-    <div style="display:flex; align-items:center; gap:10px;">
+    <div class="card__identidade" style="display:flex; align-items:center; gap:10px; cursor:pointer;" title="Ver dashboard completo">
       ${avatar ? `<img src="${avatar}" class="avatar-cliente" referrerpolicy="no-referrer" alt="" />` : `<div class="avatar-cliente avatar-cliente--vazio"></div>`}
       <h3>${cliente.nome}</h3>
     </div>
   `;
+  header.querySelector(".card__identidade").onclick = () => abrirRelatorio(clienteId);
   const acoes = document.createElement("div");
   acoes.style.display = "flex";
   acoes.style.gap = "10px";
@@ -503,14 +504,16 @@ function abrirRelatorio(clienteId) {
   const cliente = estado.clientes[clienteId];
   const modal = $("#modal-relatorio");
   modal.hidden = false;
-  $("#relatorio-titulo").textContent = `Relatório — ${cliente.nome}`;
+  const avatar = avatarDoCliente(clienteId);
+  $("#relatorio-titulo").innerHTML = `${avatar ? `<img src="${avatar}" referrerpolicy="no-referrer" class="avatar-cliente" style="width:32px;height:32px;vertical-align:middle;margin-right:8px;" alt="" />` : ""}Dashboard — ${cliente.nome}`;
   $("#relatorio-inicio").value = diasAtras(periodoSelecionado);
   $("#relatorio-fim").value = hoje();
-  $("#relatorio-conteudo").innerHTML = `<p class="vazio">Escolha o período e clique em "Montar relatório".</p>`;
   $("#relatorio-ia").innerHTML = "";
 
   $("#btn-montar-relatorio").onclick = () => montarRelatorio(clienteId);
   $("#btn-gerar-ia").onclick = () => gerarResumoIA(clienteId);
+
+  montarRelatorio(clienteId); // já mostra o dashboard direto, sem precisar clicar em nada
 }
 
 function montarRelatorio(clienteId) {
@@ -558,8 +561,31 @@ function montarRelatorio(clienteId) {
   const feitas = tarefas.filter((t) => t.feita && noRange(t));
   const pendentes = tarefas.filter((t) => !t.feita);
 
+  // resumo em destaque: soma de seguidores + o post que mais performou entre TODAS as redes
+  const todosOsUltimos = redesAtivas.map((r) => estado.ultimos[chave(clienteId, r.id)]).filter(Boolean);
+  const somaSeguidores = todosOsUltimos.reduce((acc, u) => acc + (u.seguidores || 0), 0);
+  let melhorGeral = null;
+  todosOsUltimos.forEach((u, i) => {
+    const top1 = (u.topPosts || [])[0];
+    if (top1 && (!melhorGeral || top1.views > melhorGeral.post.views)) {
+      melhorGeral = { post: top1, rede: redesAtivas[i] };
+    }
+  });
+
+  const resumo = `
+    <div class="resumo-numeros">
+      <div class="resumo-numero"><span class="resumo-valor">${fmtNum(somaSeguidores)}</span><span class="resumo-label">seguidores (todas as redes)</span></div>
+      ${
+        melhorGeral
+          ? `<div class="resumo-numero"><span class="resumo-valor" style="color:var(--mostarda)">${fmtNum(melhorGeral.post.views)}</span><span class="resumo-label">views no melhor vídeo (${melhorGeral.rede.label})</span></div>`
+          : ""
+      }
+    </div>
+  `;
+
   $("#relatorio-conteudo").innerHTML = `
     <p class="mono" style="color:var(--muted)">${new Date(inicio).toLocaleDateString("pt-BR")} — ${new Date(fim).toLocaleDateString("pt-BR")}</p>
+    ${resumo}
     ${blocosRede}
     <div class="relatorio-tarefas">
       <h4>Tarefas concluídas no período</h4>
@@ -610,6 +636,81 @@ async function gerarResumoIA(clienteId) {
     $("#relatorio-ia").innerHTML = `<p class="vazio">Erro chamando a IA: ${err.message}</p>`;
   }
 }
+
+// --- Dino, o assistente ---
+
+let dinoHistorico = [];
+
+function contextoParaDino() {
+  const resumo = {};
+  Object.entries(estado.clientes).forEach(([id, cliente]) => {
+    resumo[cliente.nome] = {};
+    REDES.forEach((rede) => {
+      const ultimo = estado.ultimos[chave(id, rede.id)];
+      if (!ultimo) return;
+      resumo[cliente.nome][rede.label] = {
+        seguidores: ultimo.seguidores,
+        seguindo: ultimo.seguindo,
+        mediaViews: ultimo.mediaViews,
+        atualizadoEm: ultimo.atualizadoEm,
+        melhorPost: ultimo.topPosts?.[0]
+          ? { views: ultimo.topPosts[0].views, likes: ultimo.topPosts[0].likes, legenda: ultimo.topPosts[0].legenda, url: ultimo.topPosts[0].url }
+          : null,
+      };
+    });
+  });
+  return resumo;
+}
+
+function addMensagemDino(texto, autor) {
+  const div = document.createElement("div");
+  div.className = "dino-msg " + (autor === "usuario" ? "dino-msg--usuario" : "dino-msg--dino");
+  div.textContent = texto;
+  $("#dino-mensagens").appendChild(div);
+  $("#dino-mensagens").scrollTop = $("#dino-mensagens").scrollHeight;
+}
+
+async function perguntarDino(pergunta) {
+  addMensagemDino(pergunta, "usuario");
+  dinoHistorico.push({ role: "user", content: pergunta });
+  addMensagemDino("pensando…", "dino");
+  const bolhaCarregando = $("#dino-mensagens").lastChild;
+
+  try {
+    const resp = await fetch(window.DINO_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pergunta, contexto: contextoParaDino(), historico: dinoHistorico.slice(0, -1) }),
+    });
+    const data = await resp.json();
+    bolhaCarregando.remove();
+    if (!data.ok) {
+      addMensagemDino(`Não consegui responder: ${data.error}`, "dino");
+      return;
+    }
+    addMensagemDino(data.resposta, "dino");
+    dinoHistorico.push({ role: "assistant", content: data.resposta });
+  } catch (err) {
+    bolhaCarregando.remove();
+    addMensagemDino(`Erro: ${err.message}`, "dino");
+  }
+}
+
+$("#btn-dino").onclick = () => {
+  $("#painel-dino").hidden = !$("#painel-dino").hidden;
+  if (!$("#painel-dino").hidden && !$("#dino-mensagens").children.length) {
+    addMensagemDino("Oi! Eu sou o Dino 🦖 Pergunta algo tipo \"qual o melhor vídeo do Beto Carvalho\" ou \"quantos seguidores a Marcella tem no TikTok\".", "dino");
+  }
+};
+$("#btn-fechar-dino").onclick = () => ($("#painel-dino").hidden = true);
+$("#form-dino").onsubmit = (e) => {
+  e.preventDefault();
+  const input = $("#input-dino");
+  const pergunta = input.value.trim();
+  if (!pergunta) return;
+  input.value = "";
+  perguntarDino(pergunta);
+};
 
 $("#btn-logout").onclick = () => {
   localStorage.removeItem(CHAVE_LOCALSTORAGE);

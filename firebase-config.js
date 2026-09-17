@@ -14,3 +14,4 @@ window.FIREBASE_CONFIG = {
 // OpenAI —, guardados só nas variáveis de ambiente da Vercel, nunca aqui).
 window.SCRAPE_API_URL = "https://t-rec-social-radar.vercel.app/api/scrape";
 window.RELATORIO_API_URL = "https://t-rec-social-radar.vercel.app/api/relatorio";
+window.DINO_API_URL = "https://t-rec-social-radar.vercel.app/api/dino";

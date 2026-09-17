@@ -1,6 +1,7 @@
 {
   "functions": {
     "api/scrape.js": { "maxDuration": 60 },
-    "api/relatorio.js": { "maxDuration": 30 }
+    "api/relatorio.js": { "maxDuration": 30 },
+    "api/dino.js": { "maxDuration": 30 }
   }
 }
