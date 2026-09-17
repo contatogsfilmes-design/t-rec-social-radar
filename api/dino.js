@@ -30,7 +30,7 @@ async function perguntarAnthropic(pergunta, contexto, historico, apiKey) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-3-5-haiku-latest',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1000,
       system: `${SYSTEM_PROMPT}\n\nDados atuais dos clientes (JSON):\n${JSON.stringify(contexto)}`,
       messages: [...historico, { role: 'user', content: pergunta }],
