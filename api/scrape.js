@@ -7,6 +7,8 @@
 // Suporta várias chaves da Apify (APIFY_TOKEN, APIFY_TOKEN_2, _3, _4): se uma
 // chave estiver sem crédito, tenta a próxima automaticamente.
 
+import { obterChaves } from './_chaves.js';
+
 export const config = { maxDuration: 60 };
 
 const ACTORS = {
@@ -23,8 +25,9 @@ const CUSTO_ESTIMADO = {
   facebook: () => 0,
 };
 
-function tokensDisponiveis() {
-  return [process.env.APIFY_TOKEN, process.env.APIFY_TOKEN_2, process.env.APIFY_TOKEN_3, process.env.APIFY_TOKEN_4].filter(Boolean);
+async function tokensDisponiveis() {
+  const chaves = await obterChaves();
+  return [chaves.APIFY_TOKEN, chaves.APIFY_TOKEN_2, chaves.APIFY_TOKEN_3, chaves.APIFY_TOKEN_4].filter(Boolean);
 }
 
 function itemLimitForDays(days) {
@@ -43,7 +46,7 @@ function setCors(res) {
 const SEM_CREDITO = /usage|limit|balance|credit|payment|monthly/i;
 
 async function callActor(actorId, input) {
-  const tokens = tokensDisponiveis();
+  const tokens = await tokensDisponiveis();
   if (!tokens.length) throw new Error('Nenhum APIFY_TOKEN configurado no Vercel.');
 
   let ultimoErro;

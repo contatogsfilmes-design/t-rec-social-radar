@@ -7,6 +7,8 @@
 // Prioridade: usa Anthropic se ANTHROPIC_API_KEY estiver configurada,
 // senão cai pra OpenAI. Se nenhuma estiver configurada, devolve erro claro.
 
+import { obterChaves } from './_chaves.js';
+
 export const config = { maxDuration: 30 };
 
 function setCors(res) {
@@ -19,12 +21,12 @@ const SYSTEM_PROMPT = `Você é o Dino, o assistente de IA da T-Rec Studio (prod
 
 Responda em português do Brasil, direto, sem enrolação. Use os dados fornecidos no contexto (JSON com seguidores, views médias e os posts que mais performaram de cada cliente) pra responder perguntas concretas — cite números reais, nunca invente. Se a pergunta for sobre um dado que não está no contexto (ex: rede que ainda não foi atualizada), diga isso claramente e sugira clicar em "Atualizar" naquele cliente/rede no painel.`;
 
-async function perguntarAnthropic(pergunta, contexto, historico) {
+async function perguntarAnthropic(pergunta, contexto, historico, apiKey) {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
@@ -39,12 +41,12 @@ async function perguntarAnthropic(pergunta, contexto, historico) {
   return data.content?.[0]?.text?.trim() || '';
 }
 
-async function perguntarOpenAI(pergunta, contexto, historico) {
+async function perguntarOpenAI(pergunta, contexto, historico, apiKey) {
   const resp = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
@@ -69,10 +71,11 @@ export default async function handler(req, res) {
   if (!pergunta) return res.status(400).json({ ok: false, error: 'Faltou a pergunta.' });
 
   try {
+    const chaves = await obterChaves();
     let resposta;
-    if (process.env.ANTHROPIC_API_KEY) resposta = await perguntarAnthropic(pergunta, contexto, historico);
-    else if (process.env.OPENAI_API_KEY) resposta = await perguntarOpenAI(pergunta, contexto, historico);
-    else return res.status(200).json({ ok: false, error: 'Nenhuma IA configurada (falta ANTHROPIC_API_KEY ou OPENAI_API_KEY na Vercel).' });
+    if (chaves.ANTHROPIC_API_KEY) resposta = await perguntarAnthropic(pergunta, contexto, historico, chaves.ANTHROPIC_API_KEY);
+    else if (chaves.OPENAI_API_KEY) resposta = await perguntarOpenAI(pergunta, contexto, historico, chaves.OPENAI_API_KEY);
+    else return res.status(200).json({ ok: false, error: 'Nenhuma IA configurada — configure em Configurações (⚙️).' });
 
     return res.status(200).json({ ok: true, resposta });
   } catch (err) {

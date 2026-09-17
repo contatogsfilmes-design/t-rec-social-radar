@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "apify-client": "^2.11.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.6.0"
   }
 }

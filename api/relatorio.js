@@ -1,9 +1,12 @@
-// Vercel Serverless Function — único lugar que conhece a OPENAI_API_KEY.
-// Recebe os dados já calculados do período (métricas + top posts + tarefas)
-// e pede pra IA escrever um resumo narrativo curto, no estilo dos relatórios
-// que o Biel já produz manualmente (direto, com números, foco em padrão que
-// performou pra replicar). Se não tiver OPENAI_API_KEY configurada, devolve
-// ok:false e o front simplesmente mostra o relatório sem o resumo em texto.
+// Vercel Serverless Function — único lugar que conhece OPENAI_API_KEY /
+// ANTHROPIC_API_KEY. Recebe os dados já calculados do período (métricas +
+// top posts + tarefas) e pede pra IA escrever um resumo narrativo curto, no
+// estilo dos relatórios que o Biel já produz manualmente (direto, com
+// números, foco em padrão que performou pra replicar). Prioriza Anthropic
+// se configurada (melhor qualidade), senão usa OpenAI. Se nenhuma estiver
+// configurada, devolve ok:false e o front mostra o relatório sem o resumo.
+
+import { obterChaves } from './_chaves.js';
 
 export const config = { maxDuration: 30 };
 
@@ -42,13 +45,36 @@ ${pendentes || '(nenhuma pendente registrada)'}
 Escreva um resumo de 3 a 5 parágrafos curtos: (1) panorama geral de crescimento/resultado, (2) qual conteúdo/formato performou melhor e por quê (baseado nos top posts), (3) o que ficou pendente e pode virar prioridade do próximo período. Não invente números que não foram passados.`;
 }
 
+async function chamarAnthropic(prompt, apiKey) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-3-5-haiku-latest', max_tokens: 1200, messages: [{ role: 'user', content: prompt }] }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data?.error?.message || `Anthropic respondeu ${resp.status}`);
+  return data.content?.[0]?.text?.trim() || '';
+}
+
+async function chamarOpenAI(prompt, apiKey) {
+  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0.5 }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data?.error?.message || `OpenAI respondeu ${resp.status}`);
+  return data.choices?.[0]?.message?.content?.trim() || '';
+}
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Método não permitido' });
 
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(200).json({ ok: false, error: 'OPENAI_API_KEY não configurada no Vercel.' });
+  const chaves = await obterChaves();
+  if (!chaves.ANTHROPIC_API_KEY && !chaves.OPENAI_API_KEY) {
+    return res.status(200).json({ ok: false, error: 'Nenhuma IA configurada (Anthropic ou OpenAI) — configure em Configurações.' });
   }
 
   const { cliente, periodo, redes, tarefas } = req.body || {};
@@ -58,22 +84,11 @@ export default async function handler(req, res) {
 
   try {
     const prompt = montarPrompt({ cliente, periodo, redes, tarefas });
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.5,
-      }),
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data?.error?.message || `OpenAI respondeu ${resp.status}`);
+    const resumo = chaves.ANTHROPIC_API_KEY
+      ? await chamarAnthropic(prompt, chaves.ANTHROPIC_API_KEY)
+      : await chamarOpenAI(prompt, chaves.OPENAI_API_KEY);
 
-    return res.status(200).json({ ok: true, resumo: data.choices?.[0]?.message?.content?.trim() || '' });
+    return res.status(200).json({ ok: true, resumo });
   } catch (err) {
     return res.status(200).json({ ok: false, error: err.message });
   }
