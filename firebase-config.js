@@ -15,3 +15,4 @@ window.FIREBASE_CONFIG = {
 window.SCRAPE_API_URL = "https://t-rec-social-radar.vercel.app/api/scrape";
 window.RELATORIO_API_URL = "https://t-rec-social-radar.vercel.app/api/relatorio";
 window.DINO_API_URL = "https://t-rec-social-radar.vercel.app/api/dino";
+window.CONFIG_STATUS_API_URL = "https://t-rec-social-radar.vercel.app/api/config-status";

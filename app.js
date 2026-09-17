@@ -858,9 +858,41 @@ function pareceChaveValida(nomeCampo, valor) {
   return true;
 }
 
+async function atualizarStatusConfig() {
+  const nomes = ["APIFY_TOKEN", "APIFY_TOKEN_2", "APIFY_TOKEN_3", "APIFY_TOKEN_4", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"];
+  nomes.forEach((n) => {
+    const el = $(`#badge-${n}`);
+    el.textContent = "checando…";
+    el.className = "badge-config badge-config--vazio";
+  });
+  try {
+    const resp = await fetch(window.CONFIG_STATUS_API_URL);
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || "falha");
+    nomes.forEach((n) => {
+      const el = $(`#badge-${n}`);
+      if (data.status[n]) {
+        el.textContent = "✓ já configurada";
+        el.className = "badge-config badge-config--ok";
+      } else {
+        el.textContent = "não configurada";
+        el.className = "badge-config badge-config--vazio";
+      }
+    });
+  } catch (err) {
+    nomes.forEach((n) => {
+      const el = $(`#badge-${n}`);
+      el.textContent = "";
+    });
+    $("#status-config").textContent = "Não consegui checar o status agora (a function precisa do FIREBASE_SERVICE_ACCOUNT configurado na Vercel pra isso funcionar).";
+  }
+}
+
 $("#btn-config").onclick = () => {
   $("#modal-config").hidden = false;
   $("#aviso-config").hidden = true;
+  $("#status-config").textContent = "";
+  atualizarStatusConfig();
 };
 $("#btn-fechar-config").onclick = () => ($("#modal-config").hidden = true);
 $("#form-config").onsubmit = async (e) => {
