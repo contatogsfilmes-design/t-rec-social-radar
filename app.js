@@ -142,6 +142,20 @@ const CLIENTES_PADRAO = {
 };
 
 let estado = { clientes: {}, ultimos: {}, historico: [] };
+
+// Modo embutido (dentro da plataforma T-REC Studio): ?embed=1&cliente=<id>
+// mostra só esse cliente, sem cabeçalho, e já abre o dashboard dele.
+// A plataforma passa a senha no #k=... (só quem está logado lá tem o link).
+const PARAMS = new URLSearchParams(location.search);
+const EMBED = PARAMS.get("embed") === "1";
+const EMBED_CLIENTE = EMBED ? PARAMS.get("cliente") : null;
+let embedAbriu = false;
+if (EMBED) {
+  document.body.classList.add("embed");
+  const k = new URLSearchParams(location.hash.slice(1)).get("k");
+  if (k === SENHA_ACESSO) localStorage.setItem(CHAVE_LOCALSTORAGE, "ok");
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+}
 let periodoSelecionado = 30;
 let selecionados = new Set(); // chaves "clienteId::network"
 let carregando = new Set();
@@ -291,6 +305,17 @@ function renderClientes() {
   const ids = Object.keys(estado.clientes);
   if (!ids.length) {
     wrap.innerHTML = `<p class="vazio">Nenhum cliente cadastrado ainda. Clique em "+ Cliente" pra adicionar.</p>`;
+    return;
+  }
+  if (EMBED_CLIENTE) {
+    if (!estado.clientes[EMBED_CLIENTE]) {
+      wrap.innerHTML = `<p class="vazio">Esse cliente não está cadastrado no Social Radar.</p>`;
+      return;
+    }
+    // já deixa as redes ativas marcadas, pra "Atualizar" funcionar de primeira
+    if (!embedAbriu) Object.entries(estado.clientes[EMBED_CLIENTE].redes || {}).forEach(([r, cfg]) => cfg.ativo && cfg.handle && selecionados.add(chave(EMBED_CLIENTE, r)));
+    wrap.appendChild(cardCliente(EMBED_CLIENTE, estado.clientes[EMBED_CLIENTE]));
+    if (!embedAbriu) { embedAbriu = true; abrirRelatorio(EMBED_CLIENTE); }
     return;
   }
   ids.forEach((clienteId) => {
@@ -513,6 +538,7 @@ async function atualizarSelecionados() {
   btn.disabled = false;
   await salvarEstado();
   render();
+  if (EMBED_CLIENTE) abrirRelatorio(EMBED_CLIENTE); // embutido: volta pro dashboard já com os números novos
 }
 
 async function atualizarUm(k) {
@@ -845,6 +871,7 @@ $("#btn-novo-cliente").onclick = () => abrirModalCliente(null);
 $("#btn-fechar-modal").onclick = () => ($("#modal-cliente").hidden = true);
 $("#btn-fechar-relatorio").onclick = () => ($("#modal-relatorio").hidden = true);
 $("#btn-voltar-cliente").onclick = () => ($("#modal-relatorio").hidden = true);
+if (EMBED) $("#btn-voltar-cliente").textContent = "⟳ Atualizar números / trocar período";
 $("#btn-imprimir-relatorio").onclick = () => window.print();
 
 // --- Configurações (chaves de API) ---
